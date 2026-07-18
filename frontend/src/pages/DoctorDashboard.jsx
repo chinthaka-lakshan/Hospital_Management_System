@@ -1,6 +1,6 @@
 import React from 'react';
 import Layout from '../components/Layout';
-import DoctorAppointments from '../components/doctor/DoctorAppointments';
+import DoctorAppointments from '../components/doctor/DoctorAppoinments';
 
 const DoctorDashboard = () => {
   return (
