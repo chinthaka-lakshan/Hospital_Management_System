@@ -6,9 +6,7 @@ use App\Http\Controllers\AuthController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\AppointmentController;
 use App\Http\Controllers\MedicalRecordController;
-
 use App\Http\Controllers\UserController;
-use App\Http\Controllers\LogController;
 
 // Public auth routes
 Route::post('/login', [AuthController::class, 'login']);
@@ -33,7 +31,6 @@ Route::middleware('auth:sanctum')->group(function () {
     // Admin only routes
     Route::middleware('role:admin')->group(function () {
         Route::apiResource('users', UserController::class);
-        Route::get('logs', [LogController::class, 'index']);
     });
 
     // Doctor, Admin & Receptionist routes (everyone can update appointments depending on context)
