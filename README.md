@@ -4,7 +4,7 @@ This is a web application with a Laravel backend and a React (Vite) frontend.
 
 ## Prerequisites
 - PHP 8.x
-- Composer
+- Composer.
 - Node.js & npm
 - MySQL (XAMPP / Laragon etc.)
 
