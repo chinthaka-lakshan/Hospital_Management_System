@@ -2,10 +2,11 @@
 # AWS EC2 User Data Script (Ubuntu 24.04)
 # This script provisions the Virtual Machine for the Hospital Management System
 
-set -e
+exec > /var/log/user_data_debug.log 2>&1
+set -x  # Print commands as they run to help debug
 
-# Add 2GB Swap Space to prevent Out of Memory (OOM) errors during npm build on t2.micro
-fallocate -l 2G /swapfile
+# Add 4GB Swap Space to prevent Out of Memory (OOM) errors during npm build
+fallocate -l 4G /swapfile
 chmod 600 /swapfile
 mkswap /swapfile
 swapon /swapfile
@@ -13,55 +14,16 @@ echo '/swapfile none swap sw 0 0' | tee -a /etc/fstab
 
 # Update and upgrade system packages
 apt-get update -y
-apt-get upgrade -y
 
-# Install Nginx, PHP 8.3 (default in 24.04), Node.js, npm, and other dependencies
+# Install Nginx, PHP 8.3, Node.js, npm
 DEBIAN_FRONTEND=noninteractive apt-get install -y nginx curl git unzip \
     php-cli php-fpm php-mysql php-xml php-mbstring php-curl php-zip \
     nodejs npm
 
-# Install Composer (PHP package manager)
+# Install Composer
 curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
 
-# Create web directory and clone repository
-cd /var/www/html
-rm -rf *
-git clone https://github.com/chinthaka-lakshan/Hospital_Management_System.git
-cd Hospital_Management_System
-
-# Setup Backend (Laravel)
-cd backend
-composer install --no-dev --optimize-autoloader
-
-cat << 'ENVEOF' > .env
-APP_NAME=Hospital_Management_System
-APP_ENV=production
-APP_KEY=
-APP_DEBUG=false
-APP_URL=http://localhost
-
-DB_CONNECTION=mysql
-DB_HOST=127.0.0.1
-DB_PORT=3306
-DB_DATABASE=mysql
-DB_USERNAME=admin
-DB_PASSWORD=hms_password_123!
-ENVEOF
-
-# We need to wait for RDS DB host to be provided or pass it manually. 
-# For now, generate the app key
-php artisan key:generate
-
-# Set permissions for Laravel
-chown -R www-data:www-data /var/www/html/Hospital_Management_System
-chmod -R 775 storage bootstrap/cache
-
-# Setup Frontend (React)
-cd ../frontend
-npm install
-npm run build
-
-# Configure Nginx directly
+# Configure Nginx immediately so it is guaranteed to apply
 cat << 'EOF' > /etc/nginx/sites-available/default
 server {
     listen 80;
@@ -106,5 +68,40 @@ EOF
 systemctl restart nginx
 systemctl enable nginx
 systemctl enable php8.3-fpm
+
+# Create web directory and clone repository
+cd /var/www/html
+rm -rf *
+git clone https://github.com/chinthaka-lakshan/Hospital_Management_System.git
+cd Hospital_Management_System
+
+# Setup Backend (Laravel)
+cd backend
+composer install --no-dev --optimize-autoloader || echo "Composer failed"
+
+cat << 'ENVEOF' > .env
+APP_NAME=Hospital_Management_System
+APP_ENV=production
+APP_KEY=
+APP_DEBUG=true
+APP_URL=http://localhost
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=mysql
+DB_USERNAME=admin
+DB_PASSWORD=hms_password_123!
+ENVEOF
+
+php artisan key:generate || echo "Key generate failed"
+
+chown -R www-data:www-data /var/www/html/Hospital_Management_System
+chmod -R 775 storage bootstrap/cache || echo "Chmod failed"
+
+# Setup Frontend (React)
+cd ../frontend
+npm install || echo "NPM install failed"
+npm run build || echo "NPM build failed"
 
 echo "VM Provisioning Complete!"
