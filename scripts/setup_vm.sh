@@ -32,7 +32,21 @@ cd Hospital_Management_System
 # Setup Backend (Laravel)
 cd backend
 composer install --no-dev --optimize-autoloader
-cp .env.example .env
+
+cat << 'ENVEOF' > .env
+APP_NAME=Hospital_Management_System
+APP_ENV=production
+APP_KEY=
+APP_DEBUG=false
+APP_URL=http://localhost
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=mysql
+DB_USERNAME=admin
+DB_PASSWORD=hms_password_123!
+ENVEOF
 
 # We need to wait for RDS DB host to be provided or pass it manually. 
 # For now, generate the app key
