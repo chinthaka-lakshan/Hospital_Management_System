@@ -116,13 +116,8 @@ USER_DATA_B64=$(base64 -i user_data.sh)
 LT_NAME="hms-lt-$(date +%s)"
 LT_ID=$(aws ec2 create-launch-template \
     --launch-template-name $LT_NAME \
-    --launch-template-data '{
-        "ImageId":"'$AMI_ID'",
-        "InstanceType":"t2.micro",
-        "SecurityGroupIds":["'$VM_SG'"],
-        "IamInstanceProfile":{"Name":"'$ROLE_NAME-profile'"},
-        "UserData":"'$USER_DATA_B64'"
-    }' --query 'LaunchTemplate.LaunchTemplateId' --output text --region $REGION)
+    --launch-template-data "{\"ImageId\":\"$AMI_ID\",\"InstanceType\":\"t2.micro\",\"SecurityGroupIds\":[\"$VM_SG\"],\"IamInstanceProfile\":{\"Name\":\"$ROLE_NAME-profile\"},\"UserData\":\"$USER_DATA_B64\",\"BlockDeviceMappings\":[{\"DeviceName\":\"/dev/sda1\",\"Ebs\":{\"VolumeSize\":20,\"VolumeType\":\"gp3\"}}]}" \
+    --query 'LaunchTemplate.LaunchTemplateId' --output text --region $REGION)
 
 ASG_NAME="hms-asg-$(date +%s)"
 aws autoscaling create-auto-scaling-group \
