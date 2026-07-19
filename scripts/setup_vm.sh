@@ -101,6 +101,10 @@ chmod -R 775 storage bootstrap/cache || echo "Chmod failed"
 
 # Setup Frontend (React)
 cd ../frontend
+# Upgrade to Node.js 20 to prevent compatibility errors with Vite/React 19
+npm install -g n || echo "Failed to install n"
+n 20 || echo "Failed to upgrade Node"
+hash -r # Refresh paths
 npm install || echo "NPM install failed"
 npm run build || echo "NPM build failed"
 
