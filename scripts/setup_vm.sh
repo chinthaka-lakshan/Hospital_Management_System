@@ -15,16 +15,10 @@ echo '/swapfile none swap sw 0 0' | tee -a /etc/fstab
 apt-get update -y
 apt-get upgrade -y
 
-# Install Nginx, PHP, and other dependencies
-apt-get install -y nginx curl git unzip
-apt-get install -y software-properties-common
-add-apt-repository -y ppa:ondrej/php
-apt-get update -y
-apt-get install -y php8.3 php8.3-cli php8.3-fpm php8.3-mysql php8.3-xml php8.3-mbstring php8.3-curl php8.3-zip
-
-# Install Node.js & npm (for frontend build)
-curl -fsSL https://deb.nodesource.com/setup_20.x | bash -
-apt-get install -y nodejs
+# Install Nginx, PHP 8.3 (default in 24.04), Node.js, npm, and other dependencies
+DEBIAN_FRONTEND=noninteractive apt-get install -y nginx curl git unzip \
+    php-cli php-fpm php-mysql php-xml php-mbstring php-curl php-zip \
+    nodejs npm
 
 # Install Composer (PHP package manager)
 curl -sS https://getcomposer.org/installer | php -- --install-dir=/usr/local/bin --filename=composer
