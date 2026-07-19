@@ -15,8 +15,8 @@ echo '/swapfile none swap sw 0 0' | tee -a /etc/fstab
 # Update and upgrade system packages
 apt-get update -y
 
-# Install Nginx, PHP 8.3, Node.js, npm
-DEBIAN_FRONTEND=noninteractive apt-get install -y nginx curl git unzip \
+# Install Nginx, PHP 8.3, Node.js, npm, AWS CLI, build-essential
+DEBIAN_FRONTEND=noninteractive apt-get install -y nginx curl git unzip awscli build-essential \
     php-cli php-fpm php-mysql php-xml php-mbstring php-curl php-zip \
     nodejs npm
 
@@ -72,7 +72,7 @@ systemctl enable php8.3-fpm
 # Create web directory and clone repository
 cd /var/www/html
 rm -rf *
-git clone https://github.com/chinthaka-lakshan/Hospital_Management_System.git
+git clone -b Lakshan https://github.com/chinthaka-lakshan/Hospital_Management_System.git
 cd Hospital_Management_System
 
 # Setup Backend (Laravel)
@@ -105,3 +105,6 @@ npm install || echo "NPM install failed"
 npm run build || echo "NPM build failed"
 
 echo "VM Provisioning Complete!"
+
+# Upload debug log to S3 for troubleshooting
+aws s3 cp /var/log/user_data_debug.log s3://YOUR_BUCKET_NAME/user_data_debug.log --region us-east-1 || true

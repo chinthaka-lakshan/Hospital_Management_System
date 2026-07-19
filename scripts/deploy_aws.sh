@@ -110,7 +110,7 @@ ALB_DNS=$(aws elbv2 describe-load-balancers --load-balancer-arns $ALB_ARN --quer
 echo "Creating Launch Template & Auto Scaling Group..."
 AMI_ID=$(aws ec2 describe-images --owners 099720109477 --filters "Name=name,Values=ubuntu/images/hvm-ssd-gp3/ubuntu-noble-24.04-amd64-server-*" --query 'sort_by(Images, &CreationDate)[-1].ImageId' --output text --region $REGION)
 
-cat scripts/setup_vm.sh | sed "s/cp .env.example .env/cp .env.example .env\nsed -i 's\/DB_HOST=127.0.0.1\/DB_HOST=$DB_ENDPOINT\/' .env/" > user_data.sh
+cat scripts/setup_vm.sh | sed "s/DB_HOST=127.0.0.1/DB_HOST=$DB_ENDPOINT/g" | sed "s/YOUR_BUCKET_NAME/$BUCKET_NAME/g" > user_data.sh
 USER_DATA_B64=$(base64 -i user_data.sh)
 
 LT_NAME="hms-lt-$(date +%s)"
