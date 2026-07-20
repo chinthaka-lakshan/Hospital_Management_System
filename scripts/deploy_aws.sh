@@ -87,6 +87,8 @@ aws iam create-role --role-name $ROLE_NAME --assume-role-policy-document '{
   "Statement": [ { "Effect": "Allow", "Principal": { "Service": "ec2.amazonaws.com" }, "Action": "sts:AssumeRole" } ]
 }' --region $REGION > /dev/null
 
+aws iam attach-role-policy --role-name $ROLE_NAME --policy-arn arn:aws:iam::aws:policy/AmazonSSMManagedInstanceCore --region $REGION > /dev/null
+
 aws iam put-role-policy --role-name $ROLE_NAME --policy-name S3AccessPolicy --policy-document '{
   "Version": "2012-10-17",
   "Statement": [ { "Effect": "Allow", "Action": ["s3:PutObject", "s3:GetObject"], "Resource": "arn:aws:s3:::'$BUCKET_NAME'/*" } ]
@@ -130,11 +132,57 @@ aws autoscaling create-auto-scaling-group \
     --target-group-arns $TG_ARN \
     --region $REGION
 
+# 11. Deploy Frontend to S3
+echo "Deploying Frontend to S3..."
+FRONTEND_BUCKET="$PROJECT_NAME-frontend-$(date +%s)"
+aws s3api create-bucket --bucket $FRONTEND_BUCKET --region $REGION > /dev/null
+
+aws s3api put-public-access-block \
+    --bucket $FRONTEND_BUCKET \
+    --public-access-block-configuration "BlockPublicAcls=false,IgnorePublicAcls=false,BlockPublicPolicy=false,RestrictPublicBuckets=false" \
+    --region $REGION
+
+aws s3api put-bucket-website \
+    --bucket $FRONTEND_BUCKET \
+    --website-configuration '{
+        "IndexDocument": {"Suffix": "index.html"},
+        "ErrorDocument": {"Key": "index.html"}
+    }' \
+    --region $REGION
+
+aws s3api put-bucket-policy \
+    --bucket $FRONTEND_BUCKET \
+    --policy '{
+        "Version": "2012-10-17",
+        "Statement": [
+            {
+                "Sid": "PublicReadGetObject",
+                "Effect": "Allow",
+                "Principal": "*",
+                "Action": "s3:GetObject",
+                "Resource": "arn:aws:s3:::'$FRONTEND_BUCKET'/*"
+            }
+        ]
+    }' \
+    --region $REGION > /dev/null
+
+echo "Building React frontend locally (this requires Node.js)..."
+cd frontend
+export VITE_API_URL="http://$ALB_DNS/api"
+npm install || echo "Local NPM install failed!"
+npm run build || echo "Local NPM build failed!"
+echo "Syncing to S3..."
+aws s3 sync dist s3://$FRONTEND_BUCKET/ --region $REGION > /dev/null
+cd ..
+
+FRONTEND_URL="http://$FRONTEND_BUCKET.s3-website-$REGION.amazonaws.com"
+
 echo "================================================="
 echo "Deployment Complete!"
-echo "S3 Bucket: $BUCKET_NAME"
+echo "S3 Debug Bucket: $BUCKET_NAME"
 echo "RDS Endpoint: $DB_ENDPOINT"
-echo "Application URL: http://$ALB_DNS"
-echo "Note: It will take a few minutes for the ASG to launch the VM and run the setup script. Please wait ~5 minutes before visiting the URL."
+echo "Backend API URL: http://$ALB_DNS"
+echo "Frontend Website URL: $FRONTEND_URL"
+echo "Note: It will take a few minutes for the ASG to launch the VM and run the setup script. Please wait ~5 minutes before visiting the Frontend URL."
 echo "================================================="
 rm user_data.sh
