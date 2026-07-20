@@ -6,7 +6,7 @@ exec > /var/log/user_data_debug.log 2>&1
 set -x  # Print commands as they run to help debug
 
 # Add 4GB Swap Space to prevent Out of Memory (OOM) errors during npm build
-fallocate -l 4G /swapfile
+dd if=/dev/zero of=/swapfile bs=1M count=4096
 chmod 600 /swapfile
 mkswap /swapfile
 swapon /swapfile
@@ -101,6 +101,14 @@ chmod -R 775 storage bootstrap/cache || echo "Chmod failed"
 
 # Setup Frontend (React)
 cd ../frontend
+# Upgrade to Node.js 20 to prevent compatibility errors with Vite/React 19
+npm install -g n || echo "Failed to install n"
+n 20 || echo "Failed to upgrade Node"
+hash -r # Refresh paths
+
+# Force Node to use less memory so it doesn't crash the t2.micro server
+export NODE_OPTIONS="--max-old-space-size=512"
+
 npm install || echo "NPM install failed"
 npm run build || echo "NPM build failed"
 
