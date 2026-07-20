@@ -4,6 +4,10 @@
 
 exec > /var/log/user_data_debug.log 2>&1
 set -x  # Print commands as they run to help debug
+set -e  # Abort on any error
+
+# Guarantee log upload even if the script crashes, retrying to allow IAM propagation
+trap 'for i in {1..5}; do aws s3 cp /var/log/user_data_debug.log s3://YOUR_BUCKET_NAME/user_data_debug.log --region us-east-1 && break; sleep 10; done' EXIT
 
 # Add 4GB Swap Space to prevent Out of Memory (OOM) errors during npm build
 dd if=/dev/zero of=/swapfile bs=1M count=4096
@@ -11,6 +15,10 @@ chmod 600 /swapfile
 mkswap /swapfile
 swapon /swapfile
 echo '/swapfile none swap sw 0 0' | tee -a /etc/fstab
+
+# Prevent interactive dialogs from freezing the deployment
+export DEBIAN_FRONTEND=noninteractive
+apt-get purge -y needrestart || true
 
 # Update and upgrade system packages
 apt-get update -y
@@ -70,8 +78,9 @@ systemctl enable nginx
 systemctl enable php8.3-fpm
 
 # Create web directory and clone repository
-cd /var/www/html
-rm -rf *
+mkdir -p /var/www/html
+cd /var/www/html || exit 1
+rm -rf ./*
 git clone -b Lakshan https://github.com/chinthaka-lakshan/Hospital_Management_System.git
 cd Hospital_Management_System
 
@@ -113,6 +122,3 @@ npm install || echo "NPM install failed"
 npm run build || echo "NPM build failed"
 
 echo "VM Provisioning Complete!"
-
-# Upload debug log to S3 for troubleshooting
-aws s3 cp /var/log/user_data_debug.log s3://YOUR_BUCKET_NAME/user_data_debug.log --region us-east-1 || true
